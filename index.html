@@ -1,1 +1,625 @@
+<!DOCTYPE html>
+<html>
 
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="Hierarchical Flow Diffusion for Efficient Frame Interpolation">
+  <meta name="keywords" content="Nerfies, D-NeRF, NeRF">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hierarchical Flow Diffusion for Efficient Frame Interpolation</title>
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PYVRSFMDRL"></script>
+  <script>
+    window.onload = function () {
+      var videos = document.getElementsByTagName('video');
+      for (var i = 0; i < videos.length; i++) {
+        videos[i].setAttribute('preload', 'auto');
+      }
+    }
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-PYVRSFMDRL');
+  </script>
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+  <!-- <link rel="icon" href="./static/images/favicon.svg"> -->
+
+  <!-- Image comparison slider -->
+  <script defer src="https://cdn.jsdelivr.net/npm/img-comparison-slider@8/dist/index.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/img-comparison-slider@8/dist/styles.css" />
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script src="./static/js/bulma-carousel.min.js"></script>
+  <script src="./static/js/bulma-slider.min.js"></script>
+  <script src="./static/js/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+
+<body>
+
+  <style>
+    .hero.custom-hero {
+      padding-top: 1rem;
+      /* 上下间距缩小 */
+      padding-bottom: 1rem;
+    }
+
+    .video-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .video-table td {
+      padding: 10px;
+      text-align: center !important;
+      vertical-align: middle;
+      /* 垂直居中 */
+      border: 1px solid gray;
+
+    }
+
+    .video-table video {
+      /* width: 100%;
+    height: auto; */
+      height: 300px;
+      width: auto;
+    }
+
+    .label-ours {
+      color: lime;
+      /* 预定义的鲜艳绿色 */
+      font-size: 12px;
+      font-weight: bold;
+
+    }
+
+    .label-gt {
+      color: blue;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    a[href="https://rgbinhandscanning.github.io/"],
+    a[href="https://chenhsuanlin.bitbucket.io/bundle-adjusting-NeRF/"],
+    a[href="https://www.magicleap.com/magic-leap-2"] {
+      text-decoration: underline;
+    }
+
+    /* Image comparison slider styles */
+    img-comparison-slider {
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      width: 100%;
+    }
+
+    .before,
+    .after {
+      margin: 0;
+    }
+
+    .before figcaption,
+    .after figcaption {
+      background: #fff;
+      border: 1px solid #c0c0c0;
+      border-radius: 4px;
+      color: #2e3440;
+      opacity: 0.8;
+      padding: 4px;
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      line-height: 100%;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+
+    .before figcaption {
+      left: 12px;
+    }
+
+    .after figcaption {
+      right: 12px;
+    }
+
+    /* New styles for row layout */
+    .image-wrapper {
+      position: relative;
+      width: 95%;
+      /* 稍微缩小宽度，不撑满格子 */
+      margin: 0 auto;
+      /* 居中 */
+      /* border: 1px solid #eee; */
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    /* Crop styles for focusing on details */
+    .crop-img {
+      width: 100%;
+      height: 160px;
+      /* 稍微减小高度，比例更协调 */
+      object-fit: cover;
+      /* 裁剪模式 */
+      object-position: center;
+      /* 默认居中 */
+      display: block;
+    }
+
+    /* Custom crop positions for each case (adjust percentages as needed) */
+    /* object-position: x% y%; 0% 0% is top-left, 100% 100% is bottom-right */
+    .pos-221 {
+      object-position: 50% 80%;
+    }
+
+    /* Case 1 稍微靠上 */
+    .pos-244 {
+      object-position: 50% 20%;
+    }
+
+    /* Case 1 稍微靠上 */
+    .pos-1871 {
+      object-position: 80% 20%;
+    }
+
+    /* Case 2 居中 */
+    .pos-298 {
+      object-position: 50% 60%;
+    }
+
+    /* Reduce vertical gap between columns */
+    .columns.is-centered.is-vcentered {
+      margin-top: 0.25rem;
+      margin-bottom: 0.25rem;
+    }
+  </style>
+
+  <nav class="navbar" role="navigation" aria-label="main navigation">
+    <div class="navbar-brand">
+      <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </a>
+    </div>
+  </nav>
+
+
+
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <h1 class="title is-1 publication-title">Hierarchical Flow Diffusion for Efficient Frame Interpolation</h1>
+            <h3 class="title is-3 conference-title">CVPR 2025</h3>
+            <div class="is-size-5 publication-authors">
+              <span class="author-block">
+                <a href="https://yanghai-1218.github.io">Yang Hai</a><sup>1</sup>,</span>
+              <span class="author-block">
+                <a href="https://openreview.net/profile?id=~Guo_Wang1">Guo Wang</a><sup>1</sup>,</span>
+              <span class="author-block">
+                <a href="https://scholar.google.com/citations?user=mbaZCHAAAAAJ&hl=en">Tan Su</a><sup>1</sup>,
+              </span>
+              <span class="author-block">
+                <a href="https://scholar.google.com/citations?user=hpt1ehgAAAAJ&hl=zh-CN">Wenjie Jiang</a><sup>1</sup>,
+              </span>
+              <span class="author-block">
+                <a href="https://yinlinhu.github.io">Yinlin Hu</a><sup>2</sup>
+              </span>
+            </div>
+
+            <div class="is-size-5 publication-authors">
+              <span class="author-block"><sup>1</sup>Insta360 Research</span>
+              <span class="author-block"><sup>2</sup>MagicLeap</span>
+            </div>
+
+            <div class="column has-text-centered">
+              <div class="publication-links">
+                <!-- PDF Link. -->
+                <span class="link-block">
+                  <a href="https://openaccess.thecvf.com/content/CVPR2025/papers/Hai_Hierarchical_Flow_Diffusion_for_Efficient_Frame_Interpolation_CVPR_2025_paper.pdf"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                    </span>
+                    <span>Paper</span>
+                  </a>
+                </span>
+                <span class="link-block">
+                  <a href="https://arxiv.org/abs/2504.00380" class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="ai ai-arxiv"></i>
+                    </span>
+                    <span>arXiv</span>
+                  </a>
+                </span>
+
+                <span class="link-block">
+                  <a class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fab fa-github"></i>
+                    </span>
+                    <span>Code coming soon</span>
+                  </a>
+                </span>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container is-max-desktop">
+      <div class="hero-body">
+        <img src="./static/images/teaser.pdf" alt="teaser" style="width: 100%; height: 100%; object-fit: cover;">
+        <div style="display: flex; justify-content: center; gap: 60px; margin-top: 0px;">
+          <span>Input Overlay</span>
+          <span>LDMVFI(8.3s)</span>
+          <span>CBBD(2.1s)</span>
+          <span>SGM-VFI(0.19s)</span>
+          <span><strong>Ours(0.20s)</strong></span>
+          <span>Ground truth</span>
+        </div>
+        <!-- <div class="content has-text-justified" style="margin-top: 15px;">
+          <strong>Different methods for video frame interpolation. </strong> Most diffusion-based interpolation methods
+          (LDMVFI, CBBD) still have a large gap from non-diffusion-based methods (SGM-VFI), in both accuracy and
+          efficiency.
+          We propose a diffusion-based model that is 10+ times faster than other diffusion-based methods, and on par
+          with SGM-VFI in efficiency.
+          More importantly, we achieve significantly better accuracy than all baselines. Note how the details and large
+          motions are missed in the baselines, but recovered with our method.
+          We report the inference seconds on the same RTX-4090 GPU with a typical 1024×1024 image pair.
+        </div> -->
+      </div>
+      <!-- Abstract. -->
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-four-fifths">
+          <h2 class="title is-3">Abstract</h2>
+          <div class="content has-text-justified">
+            <p>
+              Most recent diffusion-based methods still show a large gap compared to non-diffusion methods for video
+              frame interpolation, in both accuracy and efficiency.
+              Most of them formulate the problem as a denoising procedure in latent space directly, which is less
+              effective caused by the large latent space.
+              We propose to model bilateral optical flow explicitly by hierarchical diffusion models, which has much
+              smaller search space in the denoising procedure.
+              Based on the flow diffusion model, we then use a flow-guided images synthesizer to produce the final
+              result.
+              We train the flow diffusion model and the image synthesizer end to end.
+              Our method achieves state of the art in accuracy, and 10+ times faster than other diffusion-based methods.
+            </p>
+          </div>
+        </div>
+      </div>
+      <!--/ Abstract. -->
+
+      <div class="hero-body">
+        <!-- <div class="image-container">
+        <img src="./static/images/fig2.png" alt="SCFlow & SCFlow2">
+      </div> -->
+        <div style="display: flex; justify-content: center; gap: 20px;">
+          <div style="text-align: center;">
+            <img src="static/images/baseline_strategy.pdf" alt="Image 1" style="width: 400px;">
+            <div>(a) Baseline diffusion-based strategy</div>
+          </div>
+          <div style="text-align: center;">
+            <img src="static/images/our_strategy.pdf" alt="Image 2" style="width: 560px;">
+            <div>(b) Our method with hierarchical flow diffusion</div>
+          </div>
+        </div>
+        <div class="content has-text-justified" style="margin-top: 15px;">
+          <p>
+            <strong>Different strategies with diffusion models for video frame interpolation.</strong>
+            Given an image pair \( (I_0, I_1) \), our goal is to predict the intermediate frame \(\tilde{I}_t\).
+            (a) Most diffusion-based methods formulate the problem as a denoising process in the latent space
+            \(\tilde{F}_t\) directly, and train the diffusion network and the encoder-decoder (“E” and “D”) network
+            separately.
+            This strategy is less effective due to the large latent space. On the other hand, this method cannot handle
+            complex motions and large displacement.
+            (b) We use a hierarchical strategy with explicit flow modeling. We first train a flow-based encoder-decoder
+            for image synthesis with image pairs and the ground truth optical flow.
+            Then, unlike most diffusion-based methods that denoise the latent space directly, we use a hierarchical
+            diffusion model, conditioned on the encoder features \((F_0, F_1)\), to explicitly denoise optical flow from
+            coarse to fine. We use the predicted bilateral flow \((\tilde{f}_0, \tilde{f}_1)\) to warp image features
+            for the synthesizer, and finally fine-tune the synthesizer and the diffusion models jointly.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+
+
+
+  <section class="hero teaser">
+    <div class="container is-max-desktop">
+      <div class="hero-body">
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-four-fifths">
+            <h2 class="title is-3">Results</h2>
+          </div>
+        </div>
+
+        <!-- Visual Comparison Sliders -->
+        <div class="container is-max-desktop">
+          <!-- <h3 class="title is-4 has-text-centered">Visual Comparison</h3> -->
+          <div class="content has-text-justified">
+            <p>
+              <span class="is-size-5 has-text-weight-bold">Visual Comparison.</span>
+              For complex motions, most non-diffusion-based methods (SGM-VFI) produce blurry results.
+              However, most diffusion-based methods (LDMVFI) struggle in handling large motions.
+              Our method achieves the best accuracy and produces high-quality results in most cases, thanks to the
+              proposed hierarchical flow diffusion models.
+            </p>
+          </div>
+
+          <!-- Case 1: 221 -->
+          <div class="columns is-centered is-vcentered">
+            <!-- Input Overlay -->
+            <div class="column is-3 has-text-centered">
+              <div class="image-wrapper">
+                <img src="./static/images/compare_cases/221/input_221.png" class="crop-img pos-221">
+              </div>
+            </div>
+
+            <!-- Ours vs SGM-VFI -->
+            <div class="column is-3 has-text-centered">
+              <div class="image-wrapper">
+                <img-comparison-slider>
+                  <figure slot="first" class="before">
+                    <img src="./static/images/compare_cases/221/sgmvfi_221.png" class="crop-img pos-221">
+                    <figcaption>SGM-VFI</figcaption>
+                  </figure>
+                  <figure slot="second" class="after">
+                    <img src="./static/images/compare_cases/221/ours_221.png" class="crop-img pos-221">
+                    <figcaption>Ours</figcaption>
+                  </figure>
+                </img-comparison-slider>
+              </div>
+            </div>
+
+            <!-- Ours vs LDMVFI -->
+            <div class="column is-3 has-text-centered">
+              <div class="image-wrapper">
+                <img-comparison-slider>
+                  <figure slot="first" class="before">
+                    <img src="./static/images/compare_cases/221/ldmvfi_221.png" class="crop-img pos-221">
+                    <figcaption>LDMVFI</figcaption>
+                  </figure>
+                  <figure slot="second" class="after">
+                    <img src="./static/images/compare_cases/221/ours_221.png" class="crop-img pos-221">
+                    <figcaption>Ours</figcaption>
+                  </figure>
+                </img-comparison-slider>
+              </div>
+            </div>
+
+            <!-- GT -->
+            <div class="column is-3 has-text-centered">
+              <div class="image-wrapper">
+                <img src="./static/images/compare_cases/221/gt_221.png" class="crop-img pos-221">
+              </div>
+            </div>
+          </div>
+
+          <!-- Case 2: 244 -->
+          <div class="columns is-centered is-vcentered">
+            <!-- Input Overlay -->
+            <div class="column is-3 has-text-centered">
+              <div class="image-wrapper">
+                <img src="./static/images/compare_cases/244/input_244.png" class="crop-img pos-244">
+              </div>
+            </div>
+
+            <!-- Ours vs SGM-VFI -->
+            <div class="column is-3 has-text-centered">
+              <div class="image-wrapper">
+                <img-comparison-slider>
+                  <figure slot="first" class="before">
+                    <img src="./static/images/compare_cases/244/sgmvfi_244.png" class="crop-img pos-244">
+                    <figcaption>SGM-VFI</figcaption>
+                  </figure>
+                  <figure slot="second" class="after">
+                    <img src="./static/images/compare_cases/244/ours_244.png" class="crop-img pos-244">
+                    <figcaption>Ours</figcaption>
+                  </figure>
+                </img-comparison-slider>
+              </div>
+            </div>
+
+            <!-- Ours vs LDMVFI -->
+            <div class="column is-3 has-text-centered">
+              <div class="image-wrapper">
+                <img-comparison-slider>
+                  <figure slot="first" class="before">
+                    <img src="./static/images/compare_cases/244/ldmvfi_244.png" class="crop-img pos-244">
+                    <figcaption>LDMVFI</figcaption>
+                  </figure>
+                  <figure slot="second" class="after">
+                    <img src="./static/images/compare_cases/244/ours_244.png" class="crop-img pos-244">
+                    <figcaption>Ours</figcaption>
+                  </figure>
+                </img-comparison-slider>
+              </div>
+            </div>
+
+            <!-- GT -->
+            <div class="column is-3 has-text-centered">
+              <div class="image-wrapper">
+                <img src="./static/images/compare_cases/244/gt_244.png" class="crop-img pos-244">
+              </div>
+            </div>
+          </div>
+
+          <!-- Case 2: 244 -->
+          <div class="columns is-centered is-vcentered">
+            <!-- Input Overlay -->
+            <div class="column is-3 has-text-centered">
+              <div class="image-wrapper">
+                <img src="./static/images/compare_cases/1871/input_1871.png" class="crop-img pos-1871">
+              </div>
+            </div>
+
+            <!-- Ours vs SGM-VFI -->
+            <div class="column is-3 has-text-centered">
+              <div class="image-wrapper">
+                <img-comparison-slider>
+                  <figure slot="first" class="before">
+                    <img src="./static/images/compare_cases/1871/sgmvfi_1871.png" class="crop-img pos-1871">
+                    <figcaption>SGM-VFI</figcaption>
+                  </figure>
+                  <figure slot="second" class="after">
+                    <img src="./static/images/compare_cases/1871/ours_1871.png" class="crop-img pos-1871">
+                    <figcaption>Ours</figcaption>
+                  </figure>
+                </img-comparison-slider>
+              </div>
+            </div>
+
+            <!-- Ours vs LDMVFI -->
+            <div class="column is-3 has-text-centered">
+              <div class="image-wrapper">
+                <img-comparison-slider>
+                  <figure slot="first" class="before">
+                    <img src="./static/images/compare_cases/1871/ldmvfi_1871.png" class="crop-img pos-1871">
+                    <figcaption>LDMVFI</figcaption>
+                  </figure>
+                  <figure slot="second" class="after">
+                    <img src="./static/images/compare_cases/1871/ours_1871.png" class="crop-img pos-1871">
+                    <figcaption>Ours</figcaption>
+                  </figure>
+                </img-comparison-slider>
+              </div>
+            </div>
+
+            <!-- GT -->
+            <div class="column is-3 has-text-centered">
+              <div class="image-wrapper">
+                <img src="./static/images/compare_cases/1871/gt_1871.png" class="crop-img pos-1871">
+              </div>
+            </div>
+          </div>
+
+          <!-- Case 3: 298 -->
+          <div class="columns is-centered is-vcentered">
+            <!-- Input Overlay -->
+            <div class="column is-3 has-text-centered">
+              <div class="image-wrapper">
+                <img src="./static/images/compare_cases/298/input_298.png" class="crop-img pos-298">
+                <p class="is-size-7 has-text-weight-bold">Input Overlay</p>
+              </div>
+            </div>
+
+            <!-- Ours vs SGM-VFI -->
+            <div class="column is-3 has-text-centered">
+              <div class="image-wrapper">
+                <img-comparison-slider>
+                  <figure slot="first" class="before">
+                    <img src="./static/images/compare_cases/298/sgmvfi_298.png" class="crop-img pos-298">
+                    <figcaption>SGM-VFI</figcaption>
+                  </figure>
+                  <figure slot="second" class="after">
+                    <img src="./static/images/compare_cases/298/ours_298.png" class="crop-img pos-298">
+                    <figcaption>Ours</figcaption>
+                  </figure>
+                </img-comparison-slider>
+                <p class="is-size-7 has-text-weight-bold">vs SGM-VFI</p>
+              </div>
+            </div>
+
+            <!-- Ours vs LDMVFI -->
+            <div class="column is-3 has-text-centered">
+              <div class="image-wrapper">
+                <img-comparison-slider>
+                  <figure slot="first" class="before">
+                    <img src="./static/images/compare_cases/298/ldmvfi_298.png" class="crop-img pos-298">
+                    <figcaption>LDMVFI</figcaption>
+                  </figure>
+                  <figure slot="second" class="after">
+                    <img src="./static/images/compare_cases/298/ours_298.png" class="crop-img pos-298">
+                    <figcaption>Ours</figcaption>
+                  </figure>
+                </img-comparison-slider>
+                <p class="is-size-7 has-text-weight-bold">vs LDMVFI</p>
+              </div>
+            </div>
+
+            <!-- GT -->
+            <div class="column is-3 has-text-centered">
+              <div class="image-wrapper">
+                <img src="./static/images/compare_cases/298/gt_298.png" class="crop-img pos-298">
+                <p class="is-size-7 has-text-weight-bold">Ground Truth</p>
+              </div>
+            </div>
+          </div>
+          <br>
+        </div>
+
+        <!-- Quantitative Analysis Section -->
+        <div class="image-container">
+          <div class="content has-text-justified">
+            <p>
+              <span class="is-size-5 has-text-weight-bold">Quantitative Analysis.</span>
+              Our method outperforms the current SOTA methods significantly, especially in
+              the hard and extreme subset of SNU-FILM.
+            </p>
+          </div>
+          <img src="./static/images/snufilm_metric.png" alt="snufilm comparison"
+            style="width: 80%; display: block; margin: 0 auto;">
+        </div>
+
+
+      </div>
+    </div>
+  </section>
+
+
+
+  <section class="section" id="BibTeX">
+    <div class="container is-max-desktop content">
+      <h2 class="title">Citation</h2>
+      If you find this work useful in your research, please consider citing:
+      <pre><code>@inproceedings{yang2025hfd,
+      title     = {Hierarchical Flow Diffusion for Efficient Frame Interpolation},
+      author    = {Hai, Yang and Wang, Guo and Su, Tan and Jiang, Wenjie and Hu, Yinlin},
+      booktitle = {CVPR},
+      year      = {2025},
+    }
+</code></pre>
+    </div>
+  </section>
+
+
+  <footer class="footer">
+    <div class="container">
+      <div class="content has-text-centered">
+        The webpage is adapted from <a href="https://github.com/nerfies/nerfies.github.io">here</a>.
+      </div>
+
+    </div>
+  </footer>
+
+</body>
+
+</html>
